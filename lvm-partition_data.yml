@@ -1,0 +1,56 @@
+---
+- name: Playbook to create LV, Filesystem and Mount it
+  hosts: k8s_servers
+  remote_user: root
+  become: yes
+  become_method: sudo
+  #gather_facts: no
+  vars:
+    raw_disks: /dev/sdb # /dev/vdb,dev/vdc
+    vg_name: vg10
+    lv_name: container_data
+    lv_size: +100%FREE #80%VG, 200G
+    fs_type: xfs
+    mount_path: /var/lib/longhorn
+    delete_mount_path: false
+  tasks:
+    - name: Install lvm2 package
+      ansible.builtin.package:
+        name: [lvm2,xfsprogs]
+        state: present
+    - name: Create volume group
+      community.general.lvg:
+        vg: "{{ vg_name }}"
+        pvs: "{{ raw_disks }}"
+        state: present
+
+    - name: Create Logical Volume for data persistence
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "{{ lv_name }}"
+        size: "{{ lv_size }}"
+        state: present
+
+    - name: Create filesystem on LV
+      community.general.filesystem:
+        fstype: "{{ fs_type }}"
+        resizefs: true
+        dev:  /dev/{{ vg_name }}/{{ lv_name }}
+        state: present
+
+    - name: Get LV UUID
+      ansible.builtin.command: lsblk /dev/{{ vg_name }}/{{ lv_name }} -no UUID
+      register: lv_uuid
+
+    - name: Remove {{ mount_path }} if exist
+      ansible.builtin.file:
+        path: "{{ mount_path }}"
+        state: absent
+      when: delete_mount_path
+
+    - name: Mount created filesystem
+      ansible.posix.mount:
+        path: "{{ mount_path }}"
+        src: UUID={{ lv_uuid.stdout }}
+        state: mounted
+        fstype: "{{ fs_type }}"
