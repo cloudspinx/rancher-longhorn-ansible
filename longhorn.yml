@@ -1,0 +1,12 @@
+---
+- name: Prepare k8s nodes and deploy longhorn
+  hosts: k8s_servers
+  remote_user: root
+  become: yes
+  become_method: sudo
+  #gather_facts: no
+  vars:
+    manifests_dir: manifests/
+    kubeconfig_file: ~/.kube/config
+  roles:
+    - longhorn
