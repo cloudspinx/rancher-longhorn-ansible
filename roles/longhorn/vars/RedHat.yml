@@ -1,0 +1,4 @@
+---
+packages:
+  - iscsi-initiator-utils
+  - nfs-utils

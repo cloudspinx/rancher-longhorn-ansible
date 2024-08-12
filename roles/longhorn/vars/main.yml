@@ -1,0 +1,6 @@
+---
+kernel_modules:
+  - uio
+  - uio_pci_generic
+  - nvme-tcp
+  - iscsi_tcp
